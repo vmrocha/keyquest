@@ -62,6 +62,8 @@ pub struct Strings {
     pub next_key: &'static str,
     pub fingers: [&'static str; 9],
     pub space: &'static str,
+    /// The left and right Shift keys.
+    pub shift: [&'static str; 2],
     pub wpm: &'static str,
     pub accuracy: &'static str,
     pub raw: &'static str,
@@ -124,7 +126,7 @@ static ENGLISH: Strings = Strings {
     delete_confirm: "Delete {name} and all their progress? Press y to confirm",
     hello: "Hi, {name}",
     menu: [
-        ("Learn", "Step-by-step lessons, two new keys at a time"),
+        ("Learn", "Step-by-step lessons, from the home row to symbols"),
         ("Speed test", "Race the clock with real words"),
         ("Stats", "Records, history and the keys that trip you up"),
         ("Settings", "Language, theme, accents and test length"),
@@ -154,6 +156,7 @@ static ENGLISH: Strings = Strings {
         "thumb",
     ],
     space: "space",
+    shift: ["left Shift", "right Shift"],
     wpm: "wpm",
     accuracy: "accuracy",
     raw: "raw",
@@ -224,7 +227,7 @@ static PORTUGUESE: Strings = Strings {
     delete_confirm: "Apagar {name} e todo o progresso? Pressione s para confirmar",
     hello: "Olá, {name}",
     menu: [
-        ("Aprender", "Lições passo a passo, duas teclas novas por vez"),
+        ("Aprender", "Lições passo a passo, da fileira base aos símbolos"),
         ("Teste de velocidade", "Corra contra o relógio com palavras reais"),
         ("Estatísticas", "Recordes, histórico e as teclas que mais dão trabalho"),
         ("Configurações", "Idioma, tema, acentos e duração do teste"),
@@ -254,6 +257,7 @@ static PORTUGUESE: Strings = Strings {
         "polegar",
     ],
     space: "espaço",
+    shift: ["Shift esquerdo", "Shift direito"],
     wpm: "ppm",
     accuracy: "precisão",
     raw: "bruto",

@@ -11,7 +11,7 @@ use ratatui::widgets::{Block, BorderType, Padding, Paragraph};
 use super::keyboard;
 use super::widgets::{self, Hints};
 use crate::app::{App, Mode, Typing};
-use crate::keyboard::{base_key, finger};
+use crate::keyboard::{Key, base_key, finger, shift_for};
 use crate::lessons::{LESSONS, unlocked_keys};
 use crate::theme::theme;
 use crate::typing::{CharState, Session, wrap};
@@ -32,15 +32,14 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, typing: &Typing) -> Hints 
         Mode::Lesson(_) => true,
         Mode::Speed(_) => app.settings().keyboard_in_test,
     };
-    // Shrink the text box to two lines before giving up on the keyboard.
-    let keyboard_rows = keyboard::HEIGHT + 1;
-    let (visible, show_keyboard) = match area.height {
-        _ if !wants_keyboard => (3, false),
-        h if h >= CHROME + text_height(3) + keyboard_rows => (3, true),
-        h if h >= CHROME + text_height(2) + keyboard_rows => (2, true),
-        _ => (3, false),
-    };
-    let (keyboard_height, finger_height) = if show_keyboard { (keyboard::HEIGHT, 1) } else { (0, 0) };
+    // Shrink the text box to two lines, then the keyboard, before giving up on the keyboard.
+    let layouts = [(3, keyboard::HEIGHT), (2, keyboard::HEIGHT), (3, keyboard::COMPACT_HEIGHT), (2, keyboard::COMPACT_HEIGHT)];
+    let (visible, keyboard_height) = layouts
+        .into_iter()
+        .filter(|_| wants_keyboard)
+        .find(|&(lines, board)| area.height > CHROME + text_height(lines) + board)
+        .unwrap_or((3, 0));
+    let finger_height = if keyboard_height > 0 { 1 } else { 0 };
     let [header, gauge, _, text, hint, _, board, finger_line] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(1),
@@ -102,29 +101,40 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, typing: &Typing) -> Hints 
         frame.render_widget(Paragraph::new(widgets::dim(s.start_typing)).centered(), hint);
     }
 
-    let next = session.expected().map(base_key);
-    if show_keyboard {
+    let next = session.expected();
+    if keyboard_height > 0 {
         let known = match typing.mode {
             Mode::Lesson(index) => Some(unlocked_keys(index)),
             Mode::Speed(_) => None,
         };
+        let pressed: Vec<Key> = next.map_or(Vec::new(), |c| {
+            [Some(Key::Char(base_key(c))), shift_for(c).map(Key::Shift)].into_iter().flatten().collect()
+        });
         keyboard::render(frame, board, |key| {
-            let color = widgets::finger_color(finger(key));
-            if Some(key) == next {
+            let color = widgets::finger_color(key.finger());
+            if pressed.contains(&key) {
                 theme().on(color).bold()
-            } else if key == ' ' || known.as_ref().is_none_or(|keys| keys.contains(&key)) {
+            } else if key == Key::Char(' ') || known.as_ref().is_none_or(|keys| key.used_by(keys)) {
                 Style::new().fg(color).bg(theme().surface)
             } else {
                 Style::new().fg(theme().inactive).bg(theme().sunken)
             }
         });
-        if let Some(key) = next {
-            let label = if key == ' ' { s.space.to_string() } else { key.to_uppercase().to_string() };
-            let finger = finger(key);
+        if let Some(c) = next {
+            let label = match c {
+                ' ' => s.space.to_string(),
+                _ if c.is_alphabetic() => base_key(c).to_uppercase().to_string(),
+                _ => c.to_string(),
+            };
+            let finger = finger(c);
+            let mut how = format!("  ·  {}", s.fingers[finger as usize]);
+            if let Some(hand) = shift_for(c) {
+                how += &format!(" + {}", s.shift[hand as usize]);
+            }
             let line = Line::from(vec![
                 widgets::dim(format!("{}  ", s.next_key)),
                 Span::styled(label, Style::new().fg(widgets::finger_color(finger)).bold()),
-                widgets::dim(format!("  ·  {}", s.fingers[finger as usize])),
+                widgets::dim(how),
             ]);
             frame.render_widget(Paragraph::new(line).centered(), finger_line);
         }

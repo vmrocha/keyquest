@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
-use crate::keyboard::base_key;
+use crate::keyboard::{base_key, without_accent};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CharState {
@@ -233,7 +233,7 @@ impl Session {
     }
 
     fn matches(&self, typed: char, expected: char) -> bool {
-        typed == expected || (self.relaxed_accents && base_key(typed) == base_key(expected))
+        typed == expected || (self.relaxed_accents && without_accent(typed) == without_accent(expected))
     }
 }
 
@@ -305,6 +305,12 @@ mod tests {
         let mut relaxed = Session::new("é", None, true);
         relaxed.type_char('e', now);
         assert_eq!(relaxed.summary(now).correct, 1);
+
+        // Relaxed is only about accents: Shift still counts.
+        let mut shifted = Session::new("Fé?", None, true);
+        type_all(&mut shifted, "fe/", now);
+        assert_eq!(shifted.summary(now).correct, 1);
+        assert_eq!(shifted.key_stats()[&'/'], KeyStat { total: 1, misses: 1 });
     }
 
     #[test]

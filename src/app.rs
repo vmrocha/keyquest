@@ -17,8 +17,9 @@ use crate::{ui, words};
 pub const TEST_LENGTHS: [u64; 4] = [15, 30, 60, 120];
 pub const MENU_ITEMS: usize = 6;
 pub const SETTINGS_ITEMS: usize = 5;
-/// Lessons are shown in two columns of this many rows.
+/// Lessons are shown in columns of this many rows.
 pub const LESSON_ROWS: usize = 8;
+pub const LESSON_COLUMNS: usize = LESSONS.len().div_ceil(LESSON_ROWS);
 const MAX_NAME: usize = 20;
 /// Keys pressed right as a test ends are ignored on the results screen for this long.
 const RESULTS_GRACE: Duration = Duration::from_millis(600);

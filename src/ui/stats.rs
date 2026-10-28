@@ -10,6 +10,7 @@ use ratatui::widgets::{Axis, Block, BorderType, Chart, Dataset, GraphType, Parag
 use super::keyboard;
 use super::widgets::{self, Hints};
 use crate::app::App;
+use crate::keyboard::Key;
 use crate::lessons::MAX_STARS;
 use crate::storage::Profile;
 use crate::theme::theme;
@@ -22,7 +23,9 @@ const MIN_SAMPLES: u32 = 5;
 pub fn draw(frame: &mut Frame, area: Rect, app: &App) -> Hints {
     let s = app.strings();
     let Some(profile) = app.current() else { return Vec::new() };
-    let keyboard_height = if area.height >= 26 { keyboard::HEIGHT + 3 } else { 0 };
+    // Title, board, a gap and the legend, when there's room after the chart.
+    let board_height = keyboard::height_for(area.height.saturating_sub(20));
+    let keyboard_height = if board_height > 0 { board_height + 4 } else { 0 };
     let [header, _, tiles, _, chart, _, heatmap] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Length(1),
@@ -57,12 +60,19 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App) -> Hints {
     draw_history(frame, chart, profile, s.history, s.no_tests);
 
     if keyboard_height > 0 {
-        let [title, board, legend] =
-            Layout::vertical([Constraint::Length(2), Constraint::Length(keyboard::HEIGHT), Constraint::Length(1)])
-                .areas(heatmap);
+        let [title, board, _, legend] = Layout::vertical([
+            Constraint::Length(2),
+            Constraint::Length(board_height),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .areas(heatmap);
         let heading = Span::styled(s.key_accuracy, Style::new().fg(theme().subtext).bold());
         frame.render_widget(Paragraph::new(heading).centered(), title);
-        keyboard::render(frame, board, |key| heat(profile.keys.get(&key)));
+        keyboard::render(frame, board, |key| match key {
+            Key::Char(c) => heat(profile.keys.get(&c)),
+            Key::Shift(_) => heat(None),
+        });
         let mut swatches = Vec::new();
         for (color, text) in [(theme().green, "97%+".to_string()), (theme().yellow, "92%+".into()), (theme().orange, "85%+".into()), (theme().red, format!("{} 85%", s.below))] {
             swatches.push(Span::styled("  ", Style::new().bg(color)));

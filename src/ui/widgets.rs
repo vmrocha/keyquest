@@ -6,7 +6,7 @@ use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Paragraph};
 
-use crate::keyboard::{Finger, finger};
+use crate::keyboard::{Finger, SHIFT, finger};
 use crate::theme::theme;
 
 pub const MAX_WIDTH: u16 = 80;
@@ -52,17 +52,23 @@ pub fn keycaps(keys: &[char], dimmed: bool) -> Vec<Span<'static>> {
         if i > 0 {
             spans.push(Span::raw(" "));
         }
-        let color = if dimmed { theme().faint } else { finger_color(finger(key)) };
-        spans.push(Span::styled(key.to_uppercase().to_string(), Style::new().fg(color).bold()));
+        let (label, finger) = match key {
+            SHIFT => ("Shift".to_string(), Finger::LeftPinky),
+            _ => (key.to_uppercase().to_string(), finger(key)),
+        };
+        let color = if dimmed { theme().faint } else { finger_color(finger) };
+        spans.push(Span::styled(label, Style::new().fg(color).bold()));
     }
     spans
 }
 
+/// Earned stars filled, missing ones as outlines, so they differ by shape and not just color.
 pub fn stars(count: u8, max: u8) -> Vec<Span<'static>> {
     (0..max)
         .map(|i| {
-            let color = if i < count { theme().yellow } else { theme().inactive };
-            Span::styled(if i + 1 < max { "★ " } else { "★" }, Style::new().fg(color))
+            let (star, color) = if i < count { ('★', theme().yellow) } else { ('☆', theme().inactive) };
+            let gap = if i + 1 < max { " " } else { "" };
+            Span::styled(format!("{star}{gap}"), Style::new().fg(color))
         })
         .collect()
 }
