@@ -5,6 +5,7 @@ edition = "2024"
 rust-version = "1.88"
 description = "A terminal typing tutor and speed trainer, in English and Brazilian Portuguese"
 repository = "https://github.com/vmrocha/keyquest"
+license = "MIT"
 
 [dependencies]
 dirs = "7.0.0"

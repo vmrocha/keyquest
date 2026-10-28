@@ -124,3 +124,7 @@ Set `KEYQUEST_DATA` to use a different file, for example to try things out witho
 ```sh
 KEYQUEST_DATA=/tmp/keyquest.json keyquest
 ```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
