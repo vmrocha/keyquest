@@ -45,6 +45,22 @@ The default **Terminal** theme asks your terminal for its colors and builds the 
 
 ## Install
 
+On macOS or Linux:
+
+```sh
+curl -LsSf https://github.com/vmrocha/keyquest/releases/latest/download/keyquest-installer.sh | sh
+```
+
+On Windows, in PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://github.com/vmrocha/keyquest/releases/latest/download/keyquest-installer.ps1 | iex"
+```
+
+Both put `keyquest` in `~/.local/bin` and add it to your `PATH`. You can also download a binary from the [releases page](https://github.com/vmrocha/keyquest/releases). On macOS, a binary downloaded with a browser is blocked the first time; run `xattr -d com.apple.quarantine keyquest` to allow it.
+
+### From source
+
 You need [Rust](https://rustup.rs) 1.88 or newer.
 
 ```sh

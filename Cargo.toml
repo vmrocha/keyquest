@@ -2,6 +2,9 @@
 name = "keyquest"
 version = "0.1.0"
 edition = "2024"
+rust-version = "1.88"
+description = "A terminal typing tutor and speed trainer, in English and Brazilian Portuguese"
+repository = "https://github.com/vmrocha/keyquest"
 
 [dependencies]
 dirs = "7.0.0"
@@ -9,3 +12,8 @@ ratatui = "0.30.2"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.154"
 xterm-query = "0.6.1"
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
