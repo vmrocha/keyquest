@@ -60,6 +60,11 @@ pub struct Strings {
     pub speed_test: &'static str,
     pub start_typing: &'static str,
     pub next_key: &'static str,
+    pub combo: &'static str,
+    /// `{n}` is the number of correct keys in a row.
+    pub in_a_row: &'static str,
+    /// Cheers at 10, 25 and 50 correct keys in a row, then every hundred.
+    pub cheers: [&'static str; 4],
     pub fingers: [&'static str; 9],
     pub space: &'static str,
     /// The left and right Shift keys.
@@ -69,6 +74,7 @@ pub struct Strings {
     pub raw: &'static str,
     pub correct: &'static str,
     pub errors: &'static str,
+    pub best_combo: &'static str,
     pub feedback: Feedback,
     /// The same messages, cheerier, for Kids mode.
     pub kids_feedback: Feedback,
@@ -158,6 +164,9 @@ static ENGLISH: Strings = Strings {
     speed_test: "Speed test",
     start_typing: "Start typing when you're ready",
     next_key: "next",
+    combo: "combo",
+    in_a_row: "{n} in a row!",
+    cheers: ["Nice!", "Great!", "On fire!", "Unstoppable!"],
     fingers: [
         "left pinky",
         "left ring finger",
@@ -176,6 +185,7 @@ static ENGLISH: Strings = Strings {
     raw: "raw",
     correct: "correct",
     errors: "errors",
+    best_combo: "best combo",
     feedback: Feedback {
         lesson_passed: "Lesson complete",
         lesson_failed: "Almost there",
@@ -275,6 +285,9 @@ static PORTUGUESE: Strings = Strings {
     speed_test: "Teste de velocidade",
     start_typing: "Comece a digitar quando quiser",
     next_key: "próxima",
+    combo: "combo",
+    in_a_row: "{n} seguidos!",
+    cheers: ["Boa!", "Ótimo!", "Pegando fogo!", "Imparável!"],
     fingers: [
         "mínimo esquerdo",
         "anelar esquerdo",
@@ -293,6 +306,7 @@ static PORTUGUESE: Strings = Strings {
     raw: "bruto",
     correct: "corretos",
     errors: "erros",
+    best_combo: "melhor combo",
     feedback: Feedback {
         lesson_passed: "Lição concluída",
         lesson_failed: "Quase lá",

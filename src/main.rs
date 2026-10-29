@@ -1,6 +1,7 @@
 //! keyquest: learn to touch type in the terminal, then practice your speed.
 
 mod app;
+mod celebrate;
 mod i18n;
 mod keyboard;
 mod lessons;

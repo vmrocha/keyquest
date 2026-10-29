@@ -6,6 +6,7 @@ use ratatui::style::Style;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Paragraph};
 
+use crate::celebrate::Confetti;
 use crate::keyboard::{Finger, SHIFT, finger};
 use crate::theme::theme;
 
@@ -71,6 +72,31 @@ pub fn stars(count: u8, max: u8) -> Vec<Span<'static>> {
             Span::styled(format!("{star}{gap}"), Style::new().fg(color))
         })
         .collect()
+}
+
+/// Confetti falling over `area` `seconds` after the burst. Pieces only land
+/// on blank cells, so the text underneath stays readable.
+pub fn confetti(frame: &mut Frame, area: Rect, confetti: &Confetti, seconds: f64) {
+    let buffer = frame.buffer_mut();
+    for (x, y, glyph, color) in confetti.pieces(seconds) {
+        let column = area.x + (x * f64::from(area.width.saturating_sub(1))).round() as u16;
+        let row = area.y + (y * f64::from(area.height)) as u16;
+        if let Some(cell) = buffer.cell_mut((column, row))
+            && cell.symbol() == " "
+        {
+            cell.set_char(glyph).set_fg(theme().fingers[color]);
+        }
+    }
+}
+
+/// The color of a streak: plain at first, then warmer at each milestone.
+pub fn streak_color(streak: u32) -> ratatui::style::Color {
+    match streak {
+        s if s >= 50 => theme().accent,
+        s if s >= 25 => theme().orange,
+        s if s >= 10 => theme().yellow,
+        _ => theme().text,
+    }
 }
 
 /// A full-width list row with an accent bar when selected and optional right-aligned text.

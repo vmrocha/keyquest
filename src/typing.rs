@@ -45,6 +45,8 @@ pub struct Session {
     ended: Option<Instant>,
     keystrokes: u32,
     errors: u32,
+    streak: u32,
+    best_streak: u32,
     key_stats: BTreeMap<char, KeyStat>,
     samples: Vec<(f64, f64)>,
 }
@@ -62,6 +64,8 @@ impl Session {
             ended: None,
             keystrokes: 0,
             errors: 0,
+            streak: 0,
+            best_streak: 0,
             key_stats: BTreeMap::new(),
             samples: Vec::new(),
         }
@@ -85,9 +89,13 @@ impl Session {
         let stat = self.key_stats.entry(base_key(expected)).or_default();
         stat.total += 1;
         self.keystrokes += 1;
-        if !correct {
+        if correct {
+            self.streak += 1;
+            self.best_streak = self.best_streak.max(self.streak);
+        } else {
             stat.misses += 1;
             self.errors += 1;
+            self.streak = 0;
         }
         self.input.push(c);
         if self.limit.is_none() && self.input.len() == self.target.len() {
@@ -224,6 +232,15 @@ impl Session {
         self.limit
     }
 
+    /// Correct keystrokes in a row since the last mistake.
+    pub fn streak(&self) -> u32 {
+        self.streak
+    }
+
+    pub fn best_streak(&self) -> u32 {
+        self.best_streak
+    }
+
     pub fn key_stats(&self) -> &BTreeMap<char, KeyStat> {
         &self.key_stats
     }
@@ -293,6 +310,20 @@ mod tests {
         assert_eq!(summary.errors, 1);
         assert!((summary.accuracy - 200.0 / 3.0).abs() < 1e-9);
         assert_eq!(session.key_stats()[&'a'], KeyStat { total: 2, misses: 1 });
+    }
+
+    #[test]
+    fn mistakes_end_a_streak() {
+        let now = Instant::now();
+        let mut session = Session::new("abcdef", None, false);
+        type_all(&mut session, "abc", now);
+        assert_eq!(session.streak(), 3);
+        session.type_char('x', now);
+        assert_eq!(session.streak(), 0);
+        session.backspace();
+        type_all(&mut session, "de", now);
+        assert_eq!(session.streak(), 2);
+        assert_eq!(session.best_streak(), 3);
     }
 
     #[test]

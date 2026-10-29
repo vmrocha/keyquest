@@ -11,6 +11,7 @@ use ratatui::widgets::{Block, BorderType, Padding, Paragraph};
 use super::keyboard;
 use super::widgets::{self, Hints};
 use crate::app::{App, Mode, Typing};
+use crate::celebrate::{CHEER_SECONDS, cheer};
 use crate::keyboard::{Key, base_key, finger, shift_for};
 use crate::lessons::{LESSONS, unlocked_keys};
 use crate::theme::theme;
@@ -74,7 +75,13 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, typing: &Typing) -> Hints 
         Some(limit) => (limit.as_secs_f64() - elapsed).max(0.0).ceil(),
         None => elapsed.floor(),
     };
-    let stats = Line::from(vec![
+    let streak = session.streak();
+    let mut stats = Vec::new();
+    if streak > 0 {
+        stats.push(Span::styled(streak.to_string(), Style::new().fg(widgets::streak_color(streak)).bold()));
+        stats.push(widgets::dim(format!(" {}    ", s.combo)));
+    }
+    stats.extend([
         Span::styled(format!("{clock:.0}s"), Style::new().fg(theme().text).bold()),
         Span::raw("    "),
         Span::styled(widgets::round(summary.wpm).to_string(), Style::new().fg(theme().accent).bold()),
@@ -82,7 +89,7 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, typing: &Typing) -> Hints 
         Span::styled(format!("{:.0}%", summary.accuracy), Style::new().fg(theme().green).bold()),
         widgets::dim(format!(" {}", s.accuracy)),
     ]);
-    frame.render_widget(Paragraph::new(stats).right_aligned(), header);
+    frame.render_widget(Paragraph::new(Line::from(stats)).right_aligned(), header);
 
     let ratio = match session.limit() {
         Some(limit) => elapsed / limit.as_secs_f64(),
@@ -97,7 +104,12 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, typing: &Typing) -> Hints 
 
     draw_text(frame, text, session, visible);
 
-    if !session.is_started() {
+    let cheering = typing.cheer.filter(|(_, at)| at.elapsed().as_secs_f64() < CHEER_SECONDS);
+    if let Some((count, level)) = cheering.and_then(|(count, _)| Some((count, cheer(count)?))) {
+        let text = format!(" ★ {}  {} ★ ", s.in_a_row.replace("{n}", &count.to_string()), s.cheers[level]);
+        let badge = Span::styled(text, theme().on(widgets::streak_color(count)).bold());
+        frame.render_widget(Paragraph::new(badge).centered(), hint);
+    } else if !session.is_started() {
         frame.render_widget(Paragraph::new(widgets::dim(s.start_typing)).centered(), hint);
     }
 

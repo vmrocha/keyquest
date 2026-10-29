@@ -2,7 +2,7 @@
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Flex, Layout, Rect};
-use ratatui::style::Style;
+use ratatui::style::{Color, Style};
 use ratatui::symbols::Marker;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Axis, Block, BorderType, Chart, Dataset, GraphType, Paragraph};
@@ -15,6 +15,10 @@ use crate::theme::theme;
 
 const TILE_WIDTH: u16 = 24;
 const CHART_HEIGHT: u16 = 9;
+/// Earned stars appear one at a time, this many seconds apart.
+const STAR_DELAY: f64 = 0.4;
+/// How long a new star sparkles before it settles.
+const STAR_SPARKLE: f64 = 0.15;
 
 pub fn draw(frame: &mut Frame, area: Rect, app: &App, results: &Results) -> Hints {
     let s = app.strings();
@@ -61,8 +65,9 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, results: &Results) -> Hint
     tile(frame, wpm_tile, widgets::round(results.wpm), s.wpm, theme().accent);
     tile(frame, accuracy_tile, widgets::round(results.accuracy), &format!("% {}", s.accuracy), accuracy_color(results.accuracy));
 
+    let age = results.age().as_secs_f64();
     if lesson.is_some() {
-        frame.render_widget(Paragraph::new(Line::from(widgets::stars(results.stars, 3))).centered(), stars);
+        frame.render_widget(Paragraph::new(Line::from(appearing_stars(results.stars, age))).centered(), stars);
     }
     let text = match lesson {
         Some(index) if passed && index + 1 < LESSONS.len() => feedback.next_unlocked.to_string(),
@@ -74,13 +79,15 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, results: &Results) -> Hint
 
     // Label first, so "errors 1" reads fine without plural rules.
     let facts = format!(
-        "{} {}  ·  {} {}  ·  {} {}  ·  {:.0}s",
+        "{} {}  ·  {} {}  ·  {} {}  ·  {} {}  ·  {:.0}s",
         s.raw,
         widgets::round(results.raw_wpm),
         s.correct,
         results.correct,
         s.errors,
         results.errors,
+        s.best_combo,
+        results.best_streak,
         results.seconds
     );
     frame.render_widget(Paragraph::new(widgets::dim(facts)).centered(), details);
@@ -98,6 +105,9 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, results: &Results) -> Hint
     if chart_height > 0 {
         draw_chart(frame, chart, &results.samples, s.wpm_over_time);
     }
+    if let Some(confetti) = &results.confetti {
+        widgets::confetti(frame, frame.area(), confetti, age);
+    }
 
     match lesson {
         Some(index) if passed && index + 1 < LESSONS.len() => {
@@ -109,14 +119,28 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, results: &Results) -> Hint
     }
 }
 
-fn tile(frame: &mut Frame, area: Rect, value: u32, label: &str, color: ratatui::style::Color) {
+/// The `earned` stars filling in one by one, each sparkling briefly as it lands.
+fn appearing_stars(earned: u8, age: f64) -> Vec<Span<'static>> {
+    let shown = ((age / STAR_DELAY) as u8).min(earned);
+    let mut spans = widgets::stars(shown, 3);
+    let newest = f64::from(shown) * STAR_DELAY;
+    if shown > 0 && age - newest < STAR_SPARKLE {
+        spans[usize::from(shown - 1)] = Span::styled(
+            spans[usize::from(shown - 1)].content.replace('★', "✸"),
+            Style::new().fg(theme().orange).bold(),
+        );
+    }
+    spans
+}
+
+fn tile(frame: &mut Frame, area: Rect, value: u32, label: &str, color: Color) {
     let block = Block::bordered().border_type(BorderType::Rounded).border_style(Style::new().fg(theme().border));
     let mut lines = widgets::big_number(value, color);
     lines.push(Line::from(widgets::dim(label.to_string())));
     frame.render_widget(Paragraph::new(lines).centered().block(block), area);
 }
 
-fn accuracy_color(accuracy: f64) -> ratatui::style::Color {
+fn accuracy_color(accuracy: f64) -> Color {
     match accuracy {
         a if a >= 95.0 => theme().green,
         a if a >= 85.0 => theme().yellow,

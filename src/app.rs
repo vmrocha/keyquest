@@ -7,6 +7,7 @@ use std::time::{Duration, Instant};
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 
+use crate::celebrate::{self, Confetti};
 use crate::i18n::{Language, Strings};
 use crate::lessons::{self, LESSONS};
 use crate::rng::Rng;
@@ -33,6 +34,8 @@ pub enum Mode {
 pub struct Typing {
     pub mode: Mode,
     pub session: Session,
+    /// The streak that last hit a milestone, and when.
+    pub cheer: Option<(u32, Instant)>,
 }
 
 pub struct Results {
@@ -47,7 +50,16 @@ pub struct Results {
     pub stars: u8,
     pub personal_best: bool,
     pub missed: Vec<char>,
+    pub best_streak: u32,
+    pub confetti: Option<Confetti>,
     shown_at: Instant,
+}
+
+impl Results {
+    /// Time since the screen appeared, for its animations.
+    pub fn age(&self) -> Duration {
+        self.shown_at.elapsed()
+    }
 }
 
 pub enum Screen {
@@ -296,7 +308,7 @@ impl App {
         let words = words::list(settings.language, settings.kids);
         let text = lessons::generate(index, &words, lessons::text_length(settings.kids), &mut self.rng);
         let session = Session::new(&text, None, settings.relaxed_accents);
-        self.screen = Screen::Typing(Typing { mode: Mode::Lesson(index), session });
+        self.screen = Screen::Typing(Typing { mode: Mode::Lesson(index), session, cheer: None });
     }
 
     fn start_speed(&mut self) {
@@ -304,7 +316,7 @@ impl App {
         let text = words::random_text(&words::list(settings.language, settings.kids), 80, &mut self.rng);
         let limit = Duration::from_secs(settings.test_seconds);
         let session = Session::new(&text, Some(limit), settings.relaxed_accents);
-        self.screen = Screen::Typing(Typing { mode: Mode::Speed(settings.test_seconds), session });
+        self.screen = Screen::Typing(Typing { mode: Mode::Speed(settings.test_seconds), session, cheer: None });
     }
 
     fn restart(&mut self, mode: Mode) {
@@ -334,7 +346,13 @@ impl App {
             KeyCode::Backspace if ctrl || key.modifiers.contains(KeyModifiers::ALT) => session.delete_word(),
             KeyCode::Backspace => session.backspace(),
             KeyCode::Char('w') if ctrl => session.delete_word(),
-            KeyCode::Char(c) if !ctrl => session.type_char(c, Instant::now()),
+            KeyCode::Char(c) if !ctrl => {
+                let now = Instant::now();
+                session.type_char(c, now);
+                if celebrate::cheer(session.streak()).is_some() {
+                    typing.cheer = Some((session.streak(), now));
+                }
+            }
             _ => {}
         }
     }
@@ -353,7 +371,7 @@ impl App {
     }
 
     fn finish(&mut self) {
-        let Screen::Typing(Typing { mode, session }) = std::mem::replace(&mut self.screen, Screen::Stats) else {
+        let Screen::Typing(Typing { mode, session, .. }) = std::mem::replace(&mut self.screen, Screen::Stats) else {
             return;
         };
         let now = Instant::now();
@@ -387,6 +405,7 @@ impl App {
             None => false,
         };
         self.save();
+        let confetti = (stars > 0 || personal_best).then(|| Confetti::new(&mut self.rng));
         self.screen = Screen::Results(Results {
             mode,
             wpm: summary.wpm,
@@ -399,6 +418,8 @@ impl App {
             stars,
             personal_best,
             missed: missed.into_iter().take(5).map(|(key, _)| key).collect(),
+            best_streak: session.best_streak(),
+            confetti,
             shown_at: now,
         });
     }
