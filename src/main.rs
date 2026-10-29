@@ -6,6 +6,7 @@ mod i18n;
 mod keyboard;
 mod lessons;
 mod palette;
+mod rain;
 mod rng;
 mod storage;
 mod theme;

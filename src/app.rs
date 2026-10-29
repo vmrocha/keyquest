@@ -9,14 +9,15 @@ use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, Ke
 
 use crate::celebrate::{self, Confetti};
 use crate::i18n::{Language, Strings};
-use crate::lessons::{self, LESSONS};
+use crate::lessons::{self, LESSONS, unlocked_keys};
+use crate::rain::{self, Rain};
 use crate::rng::Rng;
 use crate::storage::{self, Profile, Settings, Store, TestRecord};
 use crate::typing::Session;
 use crate::{ui, words};
 
 pub const TEST_LENGTHS: [u64; 4] = [15, 30, 60, 120];
-pub const MENU_ITEMS: usize = 6;
+pub const MENU_ITEMS: usize = 7;
 pub const SETTINGS_ITEMS: usize = 6;
 /// Lessons are shown in columns of this many rows.
 pub const LESSON_ROWS: usize = 8;
@@ -62,6 +63,26 @@ impl Results {
     }
 }
 
+pub struct RainPlay {
+    pub game: Rain,
+    pub over: Option<GameOver>,
+    /// When the game last moved on.
+    last: Instant,
+}
+
+pub struct GameOver {
+    pub personal_best: bool,
+    pub confetti: Option<Confetti>,
+    at: Instant,
+}
+
+impl GameOver {
+    /// Time since the game ended, for its animations.
+    pub fn age(&self) -> Duration {
+        self.at.elapsed()
+    }
+}
+
 pub enum Screen {
     Profiles { selected: usize, confirm_delete: bool },
     NewProfile { name: String, error: Option<&'static str> },
@@ -69,6 +90,7 @@ pub enum Screen {
     Lessons { selected: usize },
     Typing(Typing),
     Results(Results),
+    Rain(RainPlay),
     Stats,
     Settings { selected: usize },
 }
@@ -149,6 +171,7 @@ impl App {
             &Screen::Lessons { selected } => self.lessons_key(key, selected),
             Screen::Typing(_) => self.typing_key(key),
             Screen::Results(_) => self.results_key(key),
+            Screen::Rain(_) => self.rain_key(key),
             Screen::Stats => self.stats_key(key),
             &Screen::Settings { selected } => self.settings_key(key, selected),
         }
@@ -252,7 +275,7 @@ impl App {
             KeyCode::Up | KeyCode::Char('k') => selected.saturating_sub(1),
             KeyCode::Down | KeyCode::Char('j') => (selected + 1).min(MENU_ITEMS - 1),
             KeyCode::Enter => return self.menu_action(selected),
-            KeyCode::Char(c @ '1'..='6') => return self.menu_action(c as usize - '1' as usize),
+            KeyCode::Char(c @ '1'..='7') => return self.menu_action(c as usize - '1' as usize),
             KeyCode::Esc => return self.open_profiles(),
             KeyCode::Char('q') => {
                 self.quit = true;
@@ -273,9 +296,10 @@ impl App {
                 self.screen = Screen::Lessons { selected };
             }
             1 => self.start_speed(),
-            2 => self.screen = Screen::Stats,
-            3 => self.screen = Screen::Settings { selected: 0 },
-            4 => self.open_profiles(),
+            2 => self.start_rain(),
+            3 => self.screen = Screen::Stats,
+            4 => self.screen = Screen::Settings { selected: 0 },
+            5 => self.open_profiles(),
             _ => self.quit = true,
         }
     }
@@ -319,6 +343,50 @@ impl App {
         self.screen = Screen::Typing(Typing { mode: Mode::Speed(settings.test_seconds), session, cheer: None });
     }
 
+    fn start_rain(&mut self) {
+        let settings = self.settings();
+        let Some(profile) = self.current() else { return };
+        let keys = unlocked_keys(profile.passed_lessons().max().unwrap_or(0));
+        let pool = rain::pool(&words::list(settings.language, settings.kids), &keys, &mut self.rng);
+        let game = Rain::new(pool, settings.relaxed_accents);
+        self.screen = Screen::Rain(RainPlay { game, over: None, last: Instant::now() });
+    }
+
+    fn rain_key(&mut self, key: KeyEvent) {
+        let Screen::Rain(play) = &mut self.screen else { return };
+        if let Some(over) = &play.over {
+            if over.age() < RESULTS_GRACE {
+                return;
+            }
+            match key.code {
+                KeyCode::Enter | KeyCode::Tab | KeyCode::Char(' ') => self.start_rain(),
+                KeyCode::Esc => self.screen = Screen::Menu { selected: 2 },
+                _ => {}
+            }
+            return;
+        }
+        let game = &mut play.game;
+        match key.code {
+            KeyCode::Esc => self.screen = Screen::Menu { selected: 2 },
+            KeyCode::Tab => self.start_rain(),
+            KeyCode::Enter | KeyCode::Char(' ') if !game.is_started() => game.start(),
+            KeyCode::Backspace => game.backspace(),
+            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => game.type_char(c),
+            _ => {}
+        }
+    }
+
+    fn finish_rain(&mut self) {
+        let Screen::Rain(play) = &self.screen else { return };
+        let score = play.game.score;
+        let personal_best = self.current_mut().is_some_and(|profile| profile.record_rain(score));
+        self.save();
+        let confetti = personal_best.then(|| Confetti::new(&mut self.rng));
+        if let Screen::Rain(play) = &mut self.screen {
+            play.over = Some(GameOver { personal_best, confetti, at: Instant::now() });
+        }
+    }
+
     fn restart(&mut self, mode: Mode) {
         match mode {
             Mode::Lesson(index) => self.start_lesson(index),
@@ -358,6 +426,18 @@ impl App {
     }
 
     fn tick(&mut self, now: Instant) {
+        if let Screen::Rain(play) = &mut self.screen {
+            // Cap the step so a stalled frame doesn't drop words all at once.
+            let seconds = now.saturating_duration_since(play.last).as_secs_f64().min(0.25);
+            play.last = now;
+            if play.over.is_none() {
+                play.game.tick(seconds, &mut self.rng);
+                if play.game.is_over() {
+                    self.finish_rain();
+                }
+            }
+            return;
+        }
         let settings = self.settings();
         let Screen::Typing(typing) = &mut self.screen else { return };
         typing.session.tick(now);
@@ -447,7 +527,7 @@ impl App {
 
     fn stats_key(&mut self, key: KeyEvent) {
         if matches!(key.code, KeyCode::Esc | KeyCode::Enter | KeyCode::Char('q')) {
-            self.screen = Screen::Menu { selected: 2 };
+            self.screen = Screen::Menu { selected: 3 };
         }
     }
 
@@ -464,7 +544,7 @@ impl App {
                 selected
             }
             KeyCode::Esc | KeyCode::Char('q') => {
-                self.screen = Screen::Menu { selected: 3 };
+                self.screen = Screen::Menu { selected: 4 };
                 return;
             }
             _ => return,

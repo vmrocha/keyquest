@@ -159,7 +159,7 @@ pub fn generate(index: usize, words: &[&str], length: usize, rng: &mut Rng) -> S
 }
 
 /// A short random group of keys that always includes at least one `focus` key.
-fn drill(pool: &[char], focus: &[char], rng: &mut Rng) -> String {
+pub fn drill(pool: &[char], focus: &[char], rng: &mut Rng) -> String {
     let len = rng.range(2, 5);
     let mut keys: Vec<char> = (0..len).map(|_| *rng.pick(pool)).collect();
     if !keys.iter().any(|c| focus.contains(c)) {

@@ -250,8 +250,13 @@ impl Session {
     }
 
     fn matches(&self, typed: char, expected: char) -> bool {
-        typed == expected || (self.relaxed_accents && without_accent(typed) == without_accent(expected))
+        matches(typed, expected, self.relaxed_accents)
     }
+}
+
+/// Whether `typed` counts for `expected`. With `relaxed_accents` the plain letter counts for an accented one.
+pub fn matches(typed: char, expected: char, relaxed_accents: bool) -> bool {
+    typed == expected || (relaxed_accents && without_accent(typed) == without_accent(expected))
 }
 
 /// Splits text into lines of at most `width` characters, breaking after spaces.

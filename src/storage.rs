@@ -66,6 +66,9 @@ pub struct Profile {
     pub tests: Vec<TestRecord>,
     #[serde(default)]
     pub keys: BTreeMap<char, KeyStat>,
+    /// The best Word Rain score.
+    #[serde(default)]
+    pub rain_best: u32,
 }
 
 impl Profile {
@@ -76,6 +79,7 @@ impl Profile {
             lessons: BTreeMap::new(),
             tests: Vec::new(),
             keys: BTreeMap::new(),
+            rain_best: 0,
         }
     }
 
@@ -126,6 +130,18 @@ impl Profile {
             self.tests.remove(0);
         }
         previous_best.is_some_and(|best| record.wpm > best)
+    }
+
+    /// Returns true when this beat an earlier Word Rain score.
+    pub fn record_rain(&mut self, score: u32) -> bool {
+        let previous = self.rain_best;
+        self.rain_best = previous.max(score);
+        previous > 0 && score > previous
+    }
+
+    /// Lessons with at least one star unlock the keys they teach.
+    pub fn passed_lessons(&self) -> impl Iterator<Item = usize> + '_ {
+        self.lessons.iter().filter(|(_, record)| record.stars > 0).map(|(&index, _)| index)
     }
 
     pub fn merge_keys(&mut self, stats: &BTreeMap<char, KeyStat>) {
@@ -259,6 +275,15 @@ mod tests {
         assert_eq!(profile.lessons[&0].best_wpm, 0.0);
         profile.record_lesson(0, 1, 20.0, 88.0);
         assert!(profile.is_unlocked(1));
+    }
+
+    #[test]
+    fn rain_bests_need_an_earlier_score() {
+        let mut profile = Profile::new("Di".into(), Language::English);
+        assert!(!profile.record_rain(40));
+        assert!(!profile.record_rain(30));
+        assert!(profile.record_rain(55));
+        assert_eq!(profile.rain_best, 55);
     }
 
     #[test]

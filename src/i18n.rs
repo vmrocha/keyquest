@@ -48,7 +48,7 @@ pub struct Strings {
     pub delete_confirm: &'static str,
     pub hello: &'static str,
     /// Label and description for each main menu entry.
-    pub menu: [(&'static str, &'static str); 6],
+    pub menu: [(&'static str, &'static str); 7],
     pub best: &'static str,
     pub tests_count: &'static str,
     pub lessons_title: &'static str,
@@ -81,6 +81,13 @@ pub struct Strings {
     pub personal_best: &'static str,
     pub practice_keys: &'static str,
     pub wpm_over_time: &'static str,
+    pub rain_title: &'static str,
+    pub rain_intro: [&'static str; 2],
+    pub rain_start: &'static str,
+    pub points: &'static str,
+    pub level: &'static str,
+    pub words_label: &'static str,
+    pub game_over: &'static str,
     pub stats_title: &'static str,
     pub tests_label: &'static str,
     pub best_wpm: &'static str,
@@ -114,6 +121,8 @@ pub struct Strings {
     pub h_retry: &'static str,
     pub h_again: &'static str,
     pub h_speed_test: &'static str,
+    pub h_start: &'static str,
+    pub h_play_again: &'static str,
 }
 
 impl Strings {
@@ -148,6 +157,7 @@ static ENGLISH: Strings = Strings {
     menu: [
         ("Learn", "Step-by-step lessons, from the home row to symbols"),
         ("Speed test", "Race the clock with real words"),
+        ("Word Rain", "Pop the falling words before they land"),
         ("Stats", "Records, history and the keys that trip you up"),
         ("Settings", "Kids mode, language, theme and more"),
         ("Switch profile", "Change who is typing"),
@@ -215,6 +225,16 @@ static ENGLISH: Strings = Strings {
     personal_best: "New personal best",
     practice_keys: "Keys to practice",
     wpm_over_time: "wpm over time",
+    rain_title: "Word Rain",
+    rain_intro: [
+        "Type the falling words before they reach the ground.",
+        "You have 3 hearts. Every 10 words, the rain gets faster.",
+    ],
+    rain_start: "Press space to start",
+    points: "points",
+    level: "level",
+    words_label: "words",
+    game_over: "Game over",
     stats_title: "Stats",
     tests_label: "tests",
     best_wpm: "best wpm",
@@ -254,6 +274,8 @@ static ENGLISH: Strings = Strings {
     h_retry: "retry",
     h_again: "new test",
     h_speed_test: "speed test",
+    h_start: "start",
+    h_play_again: "play again",
 };
 
 static PORTUGUESE: Strings = Strings {
@@ -269,6 +291,7 @@ static PORTUGUESE: Strings = Strings {
     menu: [
         ("Aprender", "Lições passo a passo, da fileira base aos símbolos"),
         ("Teste de velocidade", "Corra contra o relógio com palavras reais"),
+        ("Chuva de palavras", "Estoure as palavras antes que caiam no chão"),
         ("Estatísticas", "Recordes, histórico e as teclas que mais dão trabalho"),
         ("Configurações", "Modo infantil, idioma, tema e mais"),
         ("Trocar perfil", "Mudar quem está digitando"),
@@ -336,6 +359,16 @@ static PORTUGUESE: Strings = Strings {
     personal_best: "Novo recorde pessoal",
     practice_keys: "Teclas para praticar",
     wpm_over_time: "ppm ao longo do tempo",
+    rain_title: "Chuva de palavras",
+    rain_intro: [
+        "Digite as palavras antes que elas cheguem ao chão.",
+        "Você tem 3 corações. A cada 10 palavras, a chuva fica mais rápida.",
+    ],
+    rain_start: "Pressione espaço para começar",
+    points: "pontos",
+    level: "nível",
+    words_label: "palavras",
+    game_over: "Fim de jogo",
     stats_title: "Estatísticas",
     tests_label: "testes",
     best_wpm: "melhor ppm",
@@ -375,4 +408,6 @@ static PORTUGUESE: Strings = Strings {
     h_retry: "repetir",
     h_again: "novo teste",
     h_speed_test: "teste de velocidade",
+    h_start: "começar",
+    h_play_again: "jogar de novo",
 };

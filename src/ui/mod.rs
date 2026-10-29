@@ -4,6 +4,7 @@ mod keyboard;
 mod lessons;
 mod menu;
 mod profiles;
+mod rain;
 mod results;
 mod settings;
 mod stats;
@@ -43,6 +44,7 @@ pub fn draw(frame: &mut Frame, app: &App) {
         &Screen::Lessons { selected } => lessons::draw(frame, body, app, selected),
         Screen::Typing(typing) => typing::draw(frame, body, app, typing),
         Screen::Results(results) => results::draw(frame, body, app, results),
+        Screen::Rain(play) => rain::draw(frame, body, app, play),
         Screen::Stats => stats::draw(frame, body, app),
         &Screen::Settings { selected } => settings::draw(frame, body, app, selected),
     };
