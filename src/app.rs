@@ -10,6 +10,7 @@ use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, Ke
 use crate::celebrate::{self, Confetti};
 use crate::i18n::{Language, Strings};
 use crate::lessons::{self, LESSONS, unlocked_keys};
+use crate::quest;
 use crate::rain::{self, Rain};
 use crate::rng::Rng;
 use crate::storage::{self, Profile, Settings, Store, TestRecord};
@@ -19,9 +20,6 @@ use crate::{ui, words};
 pub const TEST_LENGTHS: [u64; 4] = [15, 30, 60, 120];
 pub const MENU_ITEMS: usize = 7;
 pub const SETTINGS_ITEMS: usize = 6;
-/// Lessons are shown in columns of this many rows.
-pub const LESSON_ROWS: usize = 8;
-pub const LESSON_COLUMNS: usize = LESSONS.len().div_ceil(LESSON_ROWS);
 const MAX_NAME: usize = 20;
 /// Keys pressed right as a test ends are ignored on the results screen for this long.
 const RESULTS_GRACE: Duration = Duration::from_millis(600);
@@ -52,6 +50,8 @@ pub struct Results {
     pub personal_best: bool,
     pub missed: Vec<char>,
     pub best_streak: u32,
+    /// The world this lesson finished off, the first time it's done.
+    pub world_cleared: Option<usize>,
     pub confetti: Option<Confetti>,
     shown_at: Instant,
 }
@@ -305,12 +305,11 @@ impl App {
     }
 
     fn lessons_key(&mut self, key: KeyEvent, selected: usize) {
-        let last = LESSONS.len() - 1;
         let selected = match key.code {
-            KeyCode::Up | KeyCode::Char('k') => selected.saturating_sub(1),
-            KeyCode::Down | KeyCode::Char('j') => (selected + 1).min(last),
-            KeyCode::Left | KeyCode::Char('h') => selected.checked_sub(LESSON_ROWS).unwrap_or(selected),
-            KeyCode::Right | KeyCode::Char('l') => Some(selected + LESSON_ROWS).filter(|&i| i <= last).unwrap_or(selected),
+            KeyCode::Up | KeyCode::Char('k') => quest::step(selected, 0, -1),
+            KeyCode::Down | KeyCode::Char('j') => quest::step(selected, 0, 1),
+            KeyCode::Left | KeyCode::Char('h') => quest::step(selected, -1, 0),
+            KeyCode::Right | KeyCode::Char('l') => quest::step(selected, 1, 0),
             KeyCode::Enter => {
                 if self.current().is_some_and(|p| p.is_unlocked(selected)) {
                     return self.start_lesson(selected);
@@ -468,11 +467,18 @@ impl App {
             Mode::Lesson(_) => lessons::stars(summary.accuracy, self.settings().kids),
             Mode::Speed(_) => 0,
         };
+        let mut world_cleared = None;
         let personal_best = match self.current_mut() {
             Some(profile) => {
                 profile.merge_keys(session.key_stats());
                 match mode {
-                    Mode::Lesson(index) => profile.record_lesson(index, stars, summary.wpm, summary.accuracy),
+                    Mode::Lesson(index) => {
+                        let world = quest::world_of(index);
+                        let was_cleared = quest::is_cleared(profile, world);
+                        let best = profile.record_lesson(index, stars, summary.wpm, summary.accuracy);
+                        world_cleared = (!was_cleared && quest::is_cleared(profile, world)).then_some(world);
+                        best
+                    }
                     Mode::Speed(seconds) => profile.record_test(TestRecord {
                         wpm: summary.wpm,
                         accuracy: summary.accuracy,
@@ -499,6 +505,7 @@ impl App {
             personal_best,
             missed: missed.into_iter().take(5).map(|(key, _)| key).collect(),
             best_streak: session.best_streak(),
+            world_cleared,
             confetti,
             shown_at: now,
         });

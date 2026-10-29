@@ -75,7 +75,13 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, results: &Results) -> Hint
         Some(_) => feedback.unlock_hint.replace("{n}", &star_thresholds(kids)[0].to_string()),
         None => praise(feedback.praise, results.accuracy).to_string(),
     };
-    frame.render_widget(Paragraph::new(text).style(Style::new().fg(theme().text)).centered(), message);
+    let mut line = Vec::new();
+    if let Some(world) = results.world_cleared {
+        let badge = format!(" ★ {} ★ ", s.world_cleared.replace("{world}", s.worlds[world]));
+        line.extend([Span::styled(badge, theme().on(theme().green).bold()), Span::raw("   ")]);
+    }
+    line.push(Span::styled(text, Style::new().fg(theme().text)));
+    frame.render_widget(Paragraph::new(Line::from(line)).centered(), message);
 
     // Label first, so "errors 1" reads fine without plural rules.
     let facts = format!(
