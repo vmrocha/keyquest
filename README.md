@@ -8,7 +8,10 @@ A terminal typing tutor for any age. Step-by-step lessons teach touch typing fro
 
 ## Features
 
-- **23 lessons** that start on the home row and work up to capitals, punctuation, numbers and symbols, with an on-screen keyboard that shows which finger (and which Shift) to use
+- **23 lessons** on a quest map of six worlds, from the home row up to capitals, punctuation, numbers and symbols, with an on-screen keyboard that shows which finger (and which Shift) to use
+- **Word Rain**, a game where you pop falling words before they land, using only the keys you've learned
+- **Combos and cheers** for long runs without mistakes, plus stars and confetti when you pass a lesson
+- **Kids mode** with kid-friendly words, shorter lessons and easier stars
 - **Speed tests** with real words, in 15, 30, 60 or 120 seconds
 - **Stats**: personal bests, a history chart and accuracy per key, so you know what to practice
 - **Profiles**, so everyone in the house keeps their own progress
@@ -76,27 +79,32 @@ Or run it without installing: `cargo run --release`.
 
 ### Lessons
 
-| Lessons | New keys |
-| --- | --- |
-| 1 to 4 | Home row: `F J`, `D K`, `S L`, `A ;` |
-| 5 | `G H` |
-| 6 to 8 | Top row: `E I`, `R U`, `T O` |
-| 9 to 10 | Bottom row: `N M`, `C V` |
-| 11 to 15 | The rest: `W Y`, `B P`, `X Q`, `Z ,`, `.` |
-| 16 | `Shift` for capitals |
-| 17 to 18 | Punctuation: `/ ?`, `' " :` |
-| 19 to 20 | Numbers: `1 2 3 4 5`, `6 7 8 9 0` |
-| 21 to 23 | Symbols: `- ! ( )`, `@ # $ %`, `& * + =` |
+The lessons sit on a quest map, one world per row, joined into a single path. Finish every lesson in a world to clear it.
 
-Each lesson only uses keys you have learned so far. Capitals and symbols use the Shift key on the other hand, and the keyboard lights up both keys. Accuracy earns stars: 85% for one star (and the next lesson), 93% for two, 98% for three.
+| World | Lessons | New keys |
+| --- | --- | --- |
+| Home Row Meadow | 1 to 5 | `F J`, `D K`, `S L`, `A ;`, `G H` |
+| Top Row Hills | 6 to 8 | `E I`, `R U`, `T O` |
+| Letter Forest | 9 to 15 | `N M`, `C V`, `W Y`, `B P`, `X Q`, `Z ,`, `.` |
+| Capital Castle | 16 to 18 | `Shift` for capitals, then `/ ?`, `' " :` |
+| Number Caves | 19 to 20 | `1 2 3 4 5`, `6 7 8 9 0` |
+| Symbol Volcano | 21 to 23 | `- ! ( )`, `@ # $ %`, `& * + =` |
+
+Each lesson only uses keys you have learned so far. Capitals and symbols use the Shift key on the other hand, and the keyboard lights up both keys. Accuracy earns stars: 85% for one star (and the next lesson), 93% for two, 98% for three. In Kids mode it's 75%, 85% and 95%.
+
+### Word Rain
+
+Words fall from the top of the screen. Type one to pop it before it reaches the ground; each letter is worth points, and the points grow with the level. Every 10 words the rain gets faster. You have 3 hearts, and each word that lands costs one. Word Rain only uses keys from the lessons you've passed, so it's open from the start and grows with you.
 
 ### Keys
 
 | Key | Action |
 | --- | --- |
 | `↑` `↓` (or `j` `k`) | Move |
+| `←` `→` (or `h` `l`) | Move along the quest map |
 | `⏎` | Select |
-| `1` to `6` | Jump to a menu item |
+| `1` to `7` | Jump to a menu item |
+| `space` | Start Word Rain |
 | `tab` | Restart the lesson or test |
 | `←` `→` | Change the test length before you start typing |
 | `ctrl+w` or `alt+backspace` | Delete the last word |
@@ -106,6 +114,7 @@ Each lesson only uses keys you have learned so far. Capitals and symbols use the
 
 ### Settings
 
+- **Kids mode**: kid-friendly words, 80-character lessons instead of 120, easier stars and cheerier messages
 - **Language**: English or Português (Brasil)
 - **Accents**: Exact needs the accent; Relaxed accepts the plain letter, so `a` works for `á`
 - **Speed test length**: 15, 30, 60 or 120 seconds
