@@ -16,7 +16,7 @@ use crate::{ui, words};
 
 pub const TEST_LENGTHS: [u64; 4] = [15, 30, 60, 120];
 pub const MENU_ITEMS: usize = 6;
-pub const SETTINGS_ITEMS: usize = 5;
+pub const SETTINGS_ITEMS: usize = 6;
 /// Lessons are shown in columns of this many rows.
 pub const LESSON_ROWS: usize = 8;
 pub const LESSON_COLUMNS: usize = LESSONS.len().div_ceil(LESSON_ROWS);
@@ -293,14 +293,15 @@ impl App {
 
     fn start_lesson(&mut self, index: usize) {
         let settings = self.settings();
-        let text = lessons::generate(index, &words::list(settings.language), &mut self.rng);
+        let words = words::list(settings.language, settings.kids);
+        let text = lessons::generate(index, &words, lessons::text_length(settings.kids), &mut self.rng);
         let session = Session::new(&text, None, settings.relaxed_accents);
         self.screen = Screen::Typing(Typing { mode: Mode::Lesson(index), session });
     }
 
     fn start_speed(&mut self) {
         let settings = self.settings();
-        let text = words::random_text(&words::list(settings.language), 80, &mut self.rng);
+        let text = words::random_text(&words::list(settings.language, settings.kids), 80, &mut self.rng);
         let limit = Duration::from_secs(settings.test_seconds);
         let session = Session::new(&text, Some(limit), settings.relaxed_accents);
         self.screen = Screen::Typing(Typing { mode: Mode::Speed(settings.test_seconds), session });
@@ -339,11 +340,11 @@ impl App {
     }
 
     fn tick(&mut self, now: Instant) {
-        let language = self.language();
+        let settings = self.settings();
         let Screen::Typing(typing) = &mut self.screen else { return };
         typing.session.tick(now);
         if matches!(typing.mode, Mode::Speed(_)) && typing.session.remaining() < 80 {
-            let more = words::random_text(&words::list(language), 40, &mut self.rng);
+            let more = words::random_text(&words::list(settings.language, settings.kids), 40, &mut self.rng);
             typing.session.extend(&more);
         }
         if typing.session.is_finished() {
@@ -366,7 +367,7 @@ impl App {
         missed.sort_by(|a, b| b.1.cmp(&a.1));
 
         let stars = match mode {
-            Mode::Lesson(_) => lessons::stars(summary.accuracy),
+            Mode::Lesson(_) => lessons::stars(summary.accuracy, self.settings().kids),
             Mode::Speed(_) => 0,
         };
         let personal_best = match self.current_mut() {
@@ -451,15 +452,16 @@ impl App {
     }
 
     fn change_setting(&mut self, item: usize, step: isize) {
-        if item == 2 {
+        if item == 3 {
             return self.cycle_test_length(step);
         }
         let Some(profile) = self.current_mut() else { return };
         let settings = &mut profile.settings;
         match item {
-            0 => settings.language = settings.language.next(),
-            1 => settings.relaxed_accents = !settings.relaxed_accents,
-            3 => settings.keyboard_in_test = !settings.keyboard_in_test,
+            0 => settings.kids = !settings.kids,
+            1 => settings.language = settings.language.next(),
+            2 => settings.relaxed_accents = !settings.relaxed_accents,
+            4 => settings.keyboard_in_test = !settings.keyboard_in_test,
             _ => settings.theme = settings.theme.next(),
         }
         let (language, theme) = (settings.language, settings.theme);

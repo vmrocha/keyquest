@@ -10,7 +10,7 @@ use ratatui::widgets::{Axis, Block, BorderType, Chart, Dataset, GraphType, Parag
 use super::widgets::{self, Hints};
 use crate::app::{App, Mode, Results};
 use crate::keyboard::finger;
-use crate::lessons::LESSONS;
+use crate::lessons::{LESSONS, star_thresholds};
 use crate::theme::theme;
 
 const TILE_WIDTH: u16 = 24;
@@ -18,6 +18,8 @@ const CHART_HEIGHT: u16 = 9;
 
 pub fn draw(frame: &mut Frame, area: Rect, app: &App, results: &Results) -> Hints {
     let s = app.strings();
+    let kids = app.settings().kids;
+    let feedback = s.feedback(kids);
     let lesson = match results.mode {
         Mode::Lesson(index) => Some(index),
         Mode::Speed(_) => None,
@@ -41,9 +43,9 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, results: &Results) -> Hint
     .areas(area);
 
     let (heading, color) = match lesson {
-        Some(_) if passed => (s.lesson_passed, theme().green),
-        Some(_) => (s.lesson_failed, theme().orange),
-        None => (s.times_up, theme().accent),
+        Some(_) if passed => (feedback.lesson_passed, theme().green),
+        Some(_) => (feedback.lesson_failed, theme().orange),
+        None => (feedback.times_up, theme().accent),
     };
     let mut line = vec![Span::styled(heading, Style::new().fg(color).bold())];
     if results.personal_best {
@@ -63,10 +65,10 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, results: &Results) -> Hint
         frame.render_widget(Paragraph::new(Line::from(widgets::stars(results.stars, 3))).centered(), stars);
     }
     let text = match lesson {
-        Some(index) if passed && index + 1 < LESSONS.len() => s.next_unlocked,
-        Some(_) if passed => s.all_done,
-        Some(_) => s.unlock_hint,
-        None => praise(s.praise, results.accuracy),
+        Some(index) if passed && index + 1 < LESSONS.len() => feedback.next_unlocked.to_string(),
+        Some(_) if passed => feedback.all_done.to_string(),
+        Some(_) => feedback.unlock_hint.replace("{n}", &star_thresholds(kids)[0].to_string()),
+        None => praise(feedback.praise, results.accuracy).to_string(),
     };
     frame.render_widget(Paragraph::new(text).style(Style::new().fg(theme().text)).centered(), message);
 

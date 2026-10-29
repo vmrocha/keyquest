@@ -28,6 +28,7 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, selected: usize) -> Hints 
     frame.render_widget(Paragraph::new(widgets::heading(s.settings_title)).centered(), header);
 
     let values = [
+        if settings.kids { s.on } else { s.off }.to_string(),
         settings.language.name().to_string(),
         if settings.relaxed_accents { s.accents_relaxed } else { s.accents_exact }.to_string(),
         format!("{}s", settings.test_seconds),

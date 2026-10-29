@@ -5,11 +5,16 @@ use crate::rng::Rng;
 
 const ENGLISH: &str = include_str!("../assets/words/en.txt");
 const PORTUGUESE: &str = include_str!("../assets/words/pt-br.txt");
+const ENGLISH_KIDS: &str = include_str!("../assets/words/kids-en.txt");
+const PORTUGUESE_KIDS: &str = include_str!("../assets/words/kids-pt-br.txt");
 
-pub fn list(language: Language) -> Vec<&'static str> {
-    let raw = match language {
-        Language::English => ENGLISH,
-        Language::Portuguese => PORTUGUESE,
+/// The words for `language`: common ones, or animals, food, toys and the like for `kids`.
+pub fn list(language: Language, kids: bool) -> Vec<&'static str> {
+    let raw = match (language, kids) {
+        (Language::English, false) => ENGLISH,
+        (Language::Portuguese, false) => PORTUGUESE,
+        (Language::English, true) => ENGLISH_KIDS,
+        (Language::Portuguese, true) => PORTUGUESE_KIDS,
     };
     raw.lines().map(str::trim).filter(|word| !word.is_empty()).collect()
 }
@@ -33,17 +38,19 @@ mod tests {
     #[test]
     fn lists_hold_lowercase_single_words() {
         for language in Language::ALL {
-            let words = list(language);
-            assert!(words.len() > 200, "{language:?} has only {} words", words.len());
-            for word in words {
-                assert!(word.chars().all(char::is_lowercase), "{word:?}");
+            for kids in [false, true] {
+                let words = list(language, kids);
+                assert!(words.len() > 200, "{language:?} (kids {kids}) has only {} words", words.len());
+                for word in words {
+                    assert!(word.chars().all(char::is_lowercase), "{word:?}");
+                }
             }
         }
     }
 
     #[test]
     fn random_text_has_the_requested_word_count() {
-        let words = list(Language::Portuguese);
+        let words = list(Language::Portuguese, false);
         let text = random_text(&words, 25, &mut Rng::new(1));
         assert_eq!(text.split(' ').count(), 25);
     }

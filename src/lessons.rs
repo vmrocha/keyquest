@@ -32,18 +32,18 @@ pub const LESSONS: [&[char]; 23] = [
 
 pub const MAX_STARS: u32 = 3 * LESSONS.len() as u32;
 
-/// The accuracy needed to earn a star and unlock the next lesson.
-pub const PASS_ACCURACY: f64 = 85.0;
+/// The accuracy needed for one, two and three stars. One star unlocks the next lesson.
+pub fn star_thresholds(kids: bool) -> [f64; 3] {
+    if kids { [75.0, 85.0, 95.0] } else { [85.0, 93.0, 98.0] }
+}
 
-const TEXT_LENGTH: usize = 120;
+pub fn stars(accuracy: f64, kids: bool) -> u8 {
+    star_thresholds(kids).iter().filter(|&&needed| accuracy >= needed).count() as u8
+}
 
-pub fn stars(accuracy: f64) -> u8 {
-    match accuracy {
-        a if a >= 98.0 => 3,
-        a if a >= 93.0 => 2,
-        a if a >= PASS_ACCURACY => 1,
-        _ => 0,
-    }
+/// How many characters of practice text a lesson has. Kids get shorter lessons.
+pub fn text_length(kids: bool) -> usize {
+    if kids { 80 } else { 120 }
 }
 
 /// Every key taught up to and including lesson `index`.
@@ -61,11 +61,11 @@ fn is_mark(c: char) -> bool {
     !is_letter(c) && !c.is_ascii_digit() && c != SHIFT
 }
 
-/// Builds practice text for a lesson: a warm-up on the new keys, drills mixing
-/// them with the keys learned so far, then real words once enough of them can
-/// be typed with what's been learned. Numbers, marks and capitals join in once
-/// they've been taught.
-pub fn generate(index: usize, words: &[&str], rng: &mut Rng) -> String {
+/// Builds about `length` characters of practice text for a lesson: a warm-up
+/// on the new keys, drills mixing them with the keys learned so far, then real
+/// words once enough of them can be typed with what's been learned. Numbers,
+/// marks and capitals join in once they've been taught.
+pub fn generate(index: usize, words: &[&str], length: usize, rng: &mut Rng) -> String {
     let taught = unlocked_keys(index);
     let new = LESSONS[index];
     let only = |keys: &[char], kind: fn(char) -> bool| -> Vec<char> { keys.iter().copied().filter(|&c| kind(c)).collect() };
@@ -99,24 +99,27 @@ pub fn generate(index: usize, words: &[&str], rng: &mut Rng) -> String {
         }
     }
 
-    let mut repeats = 0;
-    while length(&tokens) < TEXT_LENGTH {
-        let token = if !digits.is_empty() && rng.chance(if new_digits.is_empty() { 6 } else { 30 }) {
-            let pool = if !new_digits.is_empty() && rng.chance(60) { &new_digits } else { &digits };
-            number(pool, rng)
-        } else if known.len() >= 6 {
-            let pool = if !fresh.is_empty() && rng.chance(60) { &fresh } else { &known };
-            rng.pick(pool).to_string()
-        } else {
-            drill(&letters, focus, rng)
-        };
-        if tokens.last() == Some(&token) && repeats < 5 {
-            repeats += 1;
-            continue;
+    let fill = |tokens: &mut Vec<String>, rng: &mut Rng| {
+        let mut repeats = 0;
+        while text_size(tokens) < length {
+            let token = if !digits.is_empty() && rng.chance(if new_digits.is_empty() { 6 } else { 30 }) {
+                let pool = if !new_digits.is_empty() && rng.chance(60) { &new_digits } else { &digits };
+                number(pool, rng)
+            } else if known.len() >= 6 {
+                let pool = if !fresh.is_empty() && rng.chance(60) { &fresh } else { &known };
+                rng.pick(pool).to_string()
+            } else {
+                drill(&letters, focus, rng)
+            };
+            if tokens.last() == Some(&token) && repeats < 5 {
+                repeats += 1;
+                continue;
+            }
+            repeats = 0;
+            tokens.push(token);
         }
-        repeats = 0;
-        tokens.push(token);
-    }
+    };
+    fill(&mut tokens, rng);
 
     for token in &mut tokens {
         if !new_marks.is_empty() && rng.chance(35) {
@@ -139,6 +142,8 @@ pub fn generate(index: usize, words: &[&str], rng: &mut Rng) -> String {
             _ => add_mark(&mut tokens[i], key, &known, rng),
         }
     }
+    // Marks such as "#12" replace a whole word, so top up what they shortened.
+    fill(&mut tokens, rng);
 
     if taught.contains(&SHIFT) {
         let chance = if new.contains(&SHIFT) { 40 } else { 10 };
@@ -203,7 +208,7 @@ fn capitalize(token: &mut String) {
     }
 }
 
-fn length(tokens: &[String]) -> usize {
+fn text_size(tokens: &[String]) -> usize {
     tokens.iter().map(|t| t.chars().count() + 1).sum()
 }
 
@@ -216,16 +221,19 @@ mod tests {
     #[test]
     fn lessons_only_use_keys_taught_so_far() {
         for language in Language::ALL {
-            let words = words::list(language);
-            for index in 0..LESSONS.len() {
-                let allowed = unlocked_keys(index);
-                let shift = allowed.contains(&SHIFT);
-                for seed in 0..20 {
-                    let text = generate(index, &words, &mut Rng::new(seed));
-                    assert!(text.chars().count() >= TEXT_LENGTH - 10, "lesson {index}: {text}");
-                    for c in text.chars().filter(|&c| c != ' ') {
-                        let key = if shift { c.to_lowercase().next().unwrap_or(c) } else { c };
-                        assert!(allowed.contains(&key), "lesson {index} used {c:?}: {text}");
+            for kids in [false, true] {
+                let words = words::list(language, kids);
+                let length = text_length(kids);
+                for index in 0..LESSONS.len() {
+                    let allowed = unlocked_keys(index);
+                    let shift = allowed.contains(&SHIFT);
+                    for seed in 0..20 {
+                        let text = generate(index, &words, length, &mut Rng::new(seed));
+                        assert!(text.chars().count() >= length - 10, "lesson {index}: {text}");
+                        for c in text.chars().filter(|&c| c != ' ') {
+                            let key = if shift { c.to_lowercase().next().unwrap_or(c) } else { c };
+                            assert!(allowed.contains(&key), "lesson {index} used {c:?}: {text}");
+                        }
                     }
                 }
             }
@@ -235,13 +243,15 @@ mod tests {
     #[test]
     fn every_lesson_practices_its_new_keys() {
         for language in Language::ALL {
-            let words = words::list(language);
-            for (index, keys) in LESSONS.iter().enumerate() {
-                for seed in 0..20 {
-                    let text = generate(index, &words, &mut Rng::new(seed));
-                    for &key in *keys {
-                        let used = if key == SHIFT { text.chars().any(char::is_uppercase) } else { text.contains(key) };
-                        assert!(used, "lesson {index} never uses {key:?}: {text}");
+            for kids in [false, true] {
+                let words = words::list(language, kids);
+                for (index, keys) in LESSONS.iter().enumerate() {
+                    for seed in 0..20 {
+                        let text = generate(index, &words, text_length(kids), &mut Rng::new(seed));
+                        for &key in *keys {
+                            let used = if key == SHIFT { text.chars().any(char::is_uppercase) } else { text.contains(key) };
+                            assert!(used, "lesson {index} never uses {key:?}: {text}");
+                        }
                     }
                 }
             }
@@ -250,9 +260,17 @@ mod tests {
 
     #[test]
     fn stars_follow_accuracy() {
-        assert_eq!(stars(99.0), 3);
-        assert_eq!(stars(95.0), 2);
-        assert_eq!(stars(85.0), 1);
-        assert_eq!(stars(84.9), 0);
+        assert_eq!(stars(99.0, false), 3);
+        assert_eq!(stars(95.0, false), 2);
+        assert_eq!(stars(85.0, false), 1);
+        assert_eq!(stars(84.9, false), 0);
+    }
+
+    #[test]
+    fn kids_earn_stars_more_easily() {
+        assert_eq!(stars(95.0, true), 3);
+        assert_eq!(stars(85.0, true), 2);
+        assert_eq!(stars(75.0, true), 1);
+        assert_eq!(stars(74.9, true), 0);
     }
 }

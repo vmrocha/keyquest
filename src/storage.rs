@@ -17,6 +17,8 @@ const MAX_TESTS: usize = 500;
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
+    /// Kid-friendly words, shorter lessons, easier stars and cheerful messages.
+    pub kids: bool,
     pub language: Language,
     pub relaxed_accents: bool,
     pub keyboard_in_test: bool,
@@ -27,6 +29,7 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
+            kids: false,
             language: Language::default(),
             relaxed_accents: false,
             keyboard_in_test: false,

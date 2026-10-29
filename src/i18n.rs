@@ -69,15 +69,10 @@ pub struct Strings {
     pub raw: &'static str,
     pub correct: &'static str,
     pub errors: &'static str,
-    pub lesson_passed: &'static str,
-    pub lesson_failed: &'static str,
-    pub unlock_hint: &'static str,
-    pub next_unlocked: &'static str,
-    pub all_done: &'static str,
-    pub times_up: &'static str,
+    pub feedback: Feedback,
+    /// The same messages, cheerier, for Kids mode.
+    pub kids_feedback: Feedback,
     pub personal_best: &'static str,
-    /// Feedback for high, medium and low accuracy.
-    pub praise: [&'static str; 3],
     pub practice_keys: &'static str,
     pub wpm_over_time: &'static str,
     pub stats_title: &'static str,
@@ -90,8 +85,8 @@ pub struct Strings {
     pub key_accuracy: &'static str,
     pub below: &'static str,
     pub settings_title: &'static str,
-    pub setting_names: [&'static str; 5],
-    pub setting_help: [&'static str; 5],
+    pub setting_names: [&'static str; 6],
+    pub setting_help: [&'static str; 6],
     pub accents_exact: &'static str,
     pub accents_relaxed: &'static str,
     pub on: &'static str,
@@ -115,6 +110,25 @@ pub struct Strings {
     pub h_speed_test: &'static str,
 }
 
+impl Strings {
+    pub fn feedback(&self, kids: bool) -> &Feedback {
+        if kids { &self.kids_feedback } else { &self.feedback }
+    }
+}
+
+/// What the results screen says about how it went.
+pub struct Feedback {
+    pub lesson_passed: &'static str,
+    pub lesson_failed: &'static str,
+    /// `{n}` is the accuracy needed.
+    pub unlock_hint: &'static str,
+    pub next_unlocked: &'static str,
+    pub all_done: &'static str,
+    pub times_up: &'static str,
+    /// For high, medium and low accuracy.
+    pub praise: [&'static str; 3],
+}
+
 static ENGLISH: Strings = Strings {
     tagline: "Learn to type. Then type faster.",
     who: "Who's typing?",
@@ -129,7 +143,7 @@ static ENGLISH: Strings = Strings {
         ("Learn", "Step-by-step lessons, from the home row to symbols"),
         ("Speed test", "Race the clock with real words"),
         ("Stats", "Records, history and the keys that trip you up"),
-        ("Settings", "Language, theme, accents and test length"),
+        ("Settings", "Kids mode, language, theme and more"),
         ("Switch profile", "Change who is typing"),
         ("Quit", "See you next time"),
     ],
@@ -162,18 +176,33 @@ static ENGLISH: Strings = Strings {
     raw: "raw",
     correct: "correct",
     errors: "errors",
-    lesson_passed: "Lesson complete",
-    lesson_failed: "Almost there",
-    unlock_hint: "Reach 85% accuracy to unlock the next lesson",
-    next_unlocked: "Next lesson unlocked",
-    all_done: "Every lesson complete. Speed tests are waiting",
-    times_up: "Time's up",
+    feedback: Feedback {
+        lesson_passed: "Lesson complete",
+        lesson_failed: "Almost there",
+        unlock_hint: "Reach {n}% accuracy to unlock the next lesson",
+        next_unlocked: "Next lesson unlocked",
+        all_done: "Every lesson complete. Speed tests are waiting",
+        times_up: "Time's up",
+        praise: [
+            "Clean and precise.",
+            "Solid run. Keep the rhythm steady.",
+            "Slow down a little. Accuracy builds speed.",
+        ],
+    },
+    kids_feedback: Feedback {
+        lesson_passed: "You did it!",
+        lesson_failed: "So close!",
+        unlock_hint: "Get {n}% right to open the next lesson. One more try!",
+        next_unlocked: "A new lesson is open!",
+        all_done: "You finished every lesson. You're a typing hero!",
+        times_up: "Time's up!",
+        praise: [
+            "Amazing! Super clean typing!",
+            "Great job! Keep going!",
+            "Nice try! Go slow and steady. Speed comes later.",
+        ],
+    },
     personal_best: "New personal best",
-    praise: [
-        "Clean and precise.",
-        "Solid run. Keep the rhythm steady.",
-        "Slow down a little. Accuracy builds speed.",
-    ],
     practice_keys: "Keys to practice",
     wpm_over_time: "wpm over time",
     stats_title: "Stats",
@@ -186,8 +215,9 @@ static ENGLISH: Strings = Strings {
     key_accuracy: "Accuracy per key",
     below: "below",
     settings_title: "Settings",
-    setting_names: ["Language", "Accents", "Speed test length", "Keyboard in speed tests", "Theme"],
+    setting_names: ["Kids mode", "Language", "Accents", "Speed test length", "Keyboard in speed tests", "Theme"],
     setting_help: [
+        "Kid-friendly words, shorter lessons, easier stars and cheerful messages",
         "Language for menus, lessons and word lists",
         "Exact: accented letters need their accent. Relaxed: the plain letter counts, so a works for á",
         "How long each speed test lasts",
@@ -230,7 +260,7 @@ static PORTUGUESE: Strings = Strings {
         ("Aprender", "Lições passo a passo, da fileira base aos símbolos"),
         ("Teste de velocidade", "Corra contra o relógio com palavras reais"),
         ("Estatísticas", "Recordes, histórico e as teclas que mais dão trabalho"),
-        ("Configurações", "Idioma, tema, acentos e duração do teste"),
+        ("Configurações", "Modo infantil, idioma, tema e mais"),
         ("Trocar perfil", "Mudar quem está digitando"),
         ("Sair", "Até a próxima"),
     ],
@@ -263,18 +293,33 @@ static PORTUGUESE: Strings = Strings {
     raw: "bruto",
     correct: "corretos",
     errors: "erros",
-    lesson_passed: "Lição concluída",
-    lesson_failed: "Quase lá",
-    unlock_hint: "Alcance 85% de precisão para desbloquear a próxima lição",
-    next_unlocked: "Próxima lição desbloqueada",
-    all_done: "Todas as lições concluídas. Hora dos testes de velocidade",
-    times_up: "Tempo esgotado",
+    feedback: Feedback {
+        lesson_passed: "Lição concluída",
+        lesson_failed: "Quase lá",
+        unlock_hint: "Alcance {n}% de precisão para desbloquear a próxima lição",
+        next_unlocked: "Próxima lição desbloqueada",
+        all_done: "Todas as lições concluídas. Hora dos testes de velocidade",
+        times_up: "Tempo esgotado",
+        praise: [
+            "Limpo e preciso.",
+            "Boa! Mantenha o ritmo constante.",
+            "Vá um pouco mais devagar. A precisão traz a velocidade.",
+        ],
+    },
+    kids_feedback: Feedback {
+        lesson_passed: "Você conseguiu!",
+        lesson_failed: "Quase!",
+        unlock_hint: "Acerte {n}% para abrir a próxima lição. Tente de novo!",
+        next_unlocked: "Uma nova lição foi aberta!",
+        all_done: "Você terminou todas as lições. Você é um herói da digitação!",
+        times_up: "Acabou o tempo!",
+        praise: [
+            "Incrível! Digitação perfeita!",
+            "Muito bem! Continue assim!",
+            "Boa tentativa! Vá devagar. A velocidade vem depois.",
+        ],
+    },
     personal_best: "Novo recorde pessoal",
-    praise: [
-        "Limpo e preciso.",
-        "Boa! Mantenha o ritmo constante.",
-        "Vá um pouco mais devagar. A precisão traz a velocidade.",
-    ],
     practice_keys: "Teclas para praticar",
     wpm_over_time: "ppm ao longo do tempo",
     stats_title: "Estatísticas",
@@ -287,8 +332,9 @@ static PORTUGUESE: Strings = Strings {
     key_accuracy: "Precisão por tecla",
     below: "abaixo",
     settings_title: "Configurações",
-    setting_names: ["Idioma", "Acentos", "Duração do teste", "Teclado nos testes", "Tema"],
+    setting_names: ["Modo infantil", "Idioma", "Acentos", "Duração do teste", "Teclado nos testes", "Tema"],
     setting_help: [
+        "Palavras para crianças, lições mais curtas, estrelas mais fáceis e mensagens animadas",
         "Idioma dos menus, lições e listas de palavras",
         "Exato: letras acentuadas precisam do acento. Flexível: a letra sem acento também vale, então a serve para á",
         "Quanto tempo dura cada teste de velocidade",
