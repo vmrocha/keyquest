@@ -86,7 +86,7 @@ pub struct Strings {
     pub practice_keys: &'static str,
     pub wpm_over_time: &'static str,
     pub rain_title: &'static str,
-    pub rain_intro: [&'static str; 2],
+    pub rain_intro: [&'static str; 3],
     pub rain_start: &'static str,
     pub points: &'static str,
     pub level: &'static str,
@@ -234,6 +234,7 @@ static ENGLISH: Strings = Strings {
     rain_title: "Word Rain",
     rain_intro: [
         "Type the falling words before they reach the ground.",
+        "Miss a key and the word starts over.",
         "You have 3 hearts. Every 10 words, the rain gets faster.",
     ],
     rain_start: "Press space to start",
@@ -377,6 +378,7 @@ static PORTUGUESE: Strings = Strings {
     rain_title: "Chuva de palavras",
     rain_intro: [
         "Digite as palavras antes que elas cheguem ao chão.",
+        "Errou uma tecla? A palavra começa de novo.",
         "Você tem 3 corações. A cada 10 palavras, a chuva fica mais rápida.",
     ],
     rain_start: "Pressione espaço para começar",

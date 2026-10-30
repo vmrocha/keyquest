@@ -13,6 +13,8 @@ pub const HEARTS: u8 = 3;
 pub const LEVEL_WORDS: u32 = 10;
 /// How long pops and splashes stay on screen, in seconds.
 pub const SPLASH_SECONDS: f64 = 0.7;
+/// How long a word flashes after a wrong key, in seconds.
+pub const FLASH_SECONDS: f64 = 0.3;
 const MAX_LENGTH: usize = 9;
 /// With fewer words than this, letter drills fill the pool.
 const MIN_POOL: usize = 12;
@@ -23,6 +25,8 @@ pub struct Drop {
     pub y: f64,
     /// Letters typed so far. Only the word being typed has any.
     pub typed: usize,
+    /// Seconds left of the flash after a wrong key.
+    pub flash: f64,
 }
 
 /// Where a word popped, or landed when `points` is zero.
@@ -125,6 +129,7 @@ impl Rain {
         let fall = seconds / self.fall_seconds();
         for drop in &mut self.drops {
             drop.y += fall;
+            drop.flash = (drop.flash - seconds).max(0.0);
         }
         let (landed, falling) = std::mem::take(&mut self.drops).into_iter().partition(|drop| drop.y >= 1.0);
         self.drops = falling;
@@ -159,7 +164,7 @@ impl Rain {
             .map(|_| rng.below(1001) as f64 / 1000.0)
             .max_by(|a, b| self.room(*a).total_cmp(&self.room(*b)))
             .unwrap_or(0.5);
-        self.drops.push(Drop { word: word.chars().collect(), x, y: 0.0, typed: 0 });
+        self.drops.push(Drop { word: word.chars().collect(), x, y: 0.0, typed: 0, flash: 0.0 });
     }
 
     /// How far `x` is from the closest word still near the top.
@@ -173,7 +178,9 @@ impl Rain {
     }
 
     /// Types `c` into the word in progress, or starts the lowest word that
-    /// begins with it. Spaces are ignored, since words pop on their last letter.
+    /// begins with it. A wrong key starts the word in progress over, so
+    /// mashing keys doesn't pay. Spaces are ignored, since words pop on their
+    /// last letter.
     pub fn type_char(&mut self, c: char) {
         if !self.started || self.is_over() || c == ' ' {
             return;
@@ -195,6 +202,10 @@ impl Rain {
         };
         let Some(i) = hit else {
             self.misses += 1;
+            if let Some(i) = self.target() {
+                self.drops[i].typed = 0;
+                self.drops[i].flash = FLASH_SECONDS;
+            }
             return;
         };
         let drop = &mut self.drops[i];
@@ -226,7 +237,7 @@ mod tests {
     }
 
     fn drop(word: &str, y: f64) -> Drop {
-        Drop { word: word.chars().collect(), x: 0.5, y, typed: 0 }
+        Drop { word: word.chars().collect(), x: 0.5, y, typed: 0, flash: 0.0 }
     }
 
     #[test]
@@ -259,11 +270,28 @@ mod tests {
         rain.drops = vec![drop("sea", 0.2), drop("sun", 0.7)];
         rain.type_char('s');
         assert_eq!(rain.target(), Some(1));
-        rain.type_char('x');
-        assert_eq!(rain.drops[1].typed, 1);
+        rain.type_char('u');
         rain.backspace();
+        assert_eq!(rain.drops[1].typed, 1);
+    }
+
+    #[test]
+    fn a_wrong_key_starts_the_word_over() {
+        let mut rain = game(&["sun"]);
+        rain.drops = vec![drop("sun", 0.5)];
+        rain.type_char('s');
+        rain.type_char('u');
+        rain.type_char('x');
         assert_eq!(rain.target(), None);
+        assert!(rain.drops[0].flash > 0.0);
         assert!(rain.accuracy() < 100.0);
+        // Mashing the right letters out of order never pops the word.
+        for c in "nusnus".chars() {
+            rain.type_char(c);
+        }
+        assert_eq!(rain.popped, 0);
+        rain.tick(1.0, &mut Rng::new(1));
+        assert_eq!(rain.drops[0].flash, 0.0);
     }
 
     #[test]

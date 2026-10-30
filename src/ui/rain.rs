@@ -46,14 +46,10 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, play: &RainPlay) -> Hints 
     draw_splashes(frame, sky, game);
 
     if !game.is_started() {
-        let mut lines = vec![
-            Line::from(widgets::heading(s.rain_title)),
-            Line::default(),
-            Line::styled(s.rain_intro[0], Style::new().fg(theme().text)),
-            Line::styled(s.rain_intro[1], Style::new().fg(theme().text)),
-            Line::default(),
-            Line::from(Span::styled(format!(" {} ", s.rain_start), theme().on(theme().accent).bold())),
-        ];
+        let mut lines = vec![Line::from(widgets::heading(s.rain_title)), Line::default()];
+        lines.extend(s.rain_intro.iter().map(|&text| Line::styled(text, Style::new().fg(theme().text))));
+        lines.push(Line::default());
+        lines.push(Line::from(Span::styled(format!(" {} ", s.rain_start), theme().on(theme().accent).bold())));
         if best > 0 {
             lines.push(Line::default());
             lines.push(Line::from(widgets::dim(format!("{} {best}", s.best))));
@@ -86,6 +82,12 @@ fn draw_drop(frame: &mut Frame, sky: Rect, drop: &Drop) {
         _ => theme().text,
     };
     let typing = drop.typed > 0;
+    if drop.flash > 0.0 {
+        let at = place(sky, drop.x, drop.y, drop.word.len() as u16);
+        let word: String = drop.word.iter().collect();
+        frame.render_widget(Paragraph::new(Span::styled(word, theme().on(theme().red).bold())), at);
+        return;
+    }
     let spans: Vec<Span> = drop
         .word
         .iter()

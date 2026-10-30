@@ -94,7 +94,7 @@ Each lesson only uses keys you have learned so far. Capitals and symbols use the
 
 ### Word Rain
 
-Words fall from the top of the screen. Type one to pop it before it reaches the ground; each letter is worth points, and the points grow with the level. Every 10 words the rain gets faster. You have 3 hearts, and each word that lands costs one. Word Rain only uses keys from the lessons you've passed, so it's open from the start and grows with you.
+Words fall from the top of the screen. Type one to pop it before it reaches the ground; each letter is worth points, and the points grow with the level. A wrong key starts the word you're typing over, so mashing keys doesn't help. Every 10 words the rain gets faster. You have 3 hearts, and each word that lands costs one. Word Rain only uses keys from the lessons you've passed, so it's open from the start and grows with you.
 
 ### Keys
 
