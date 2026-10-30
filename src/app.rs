@@ -65,6 +65,8 @@ impl Results {
 
 pub struct RainPlay {
     pub game: Rain,
+    /// Paused, asking whether to end the game.
+    pub confirm_end: bool,
     pub over: Option<GameOver>,
     /// When the game last moved on.
     last: Instant,
@@ -72,6 +74,8 @@ pub struct RainPlay {
 
 pub struct GameOver {
     pub personal_best: bool,
+    /// The profile's first game with any points.
+    pub first_score: bool,
     pub confetti: Option<Confetti>,
     at: Instant,
 }
@@ -348,7 +352,7 @@ impl App {
         let keys = unlocked_keys(profile.passed_lessons().max().unwrap_or(0));
         let pool = rain::pool(&words::list(settings.language, settings.kids), &keys, &mut self.rng);
         let game = Rain::new(pool, settings.relaxed_accents);
-        self.screen = Screen::Rain(RainPlay { game, over: None, last: Instant::now() });
+        self.screen = Screen::Rain(RainPlay { game, confirm_end: false, over: None, last: Instant::now() });
     }
 
     fn rain_key(&mut self, key: KeyEvent) {
@@ -364,8 +368,18 @@ impl App {
             }
             return;
         }
+        // Ending early still counts the score, and shows it before leaving.
+        if play.confirm_end {
+            match key.code {
+                KeyCode::Enter => self.finish_rain(),
+                KeyCode::Esc => play.confirm_end = false,
+                _ => {}
+            }
+            return;
+        }
         let game = &mut play.game;
         match key.code {
+            KeyCode::Esc if game.is_started() => play.confirm_end = true,
             KeyCode::Esc => self.screen = Screen::Menu { selected: 2 },
             KeyCode::Tab => self.start_rain(),
             KeyCode::Enter | KeyCode::Char(' ') if !game.is_started() => game.start(),
@@ -378,11 +392,18 @@ impl App {
     fn finish_rain(&mut self) {
         let Screen::Rain(play) = &self.screen else { return };
         let score = play.game.score;
-        let personal_best = self.current_mut().is_some_and(|profile| profile.record_rain(score));
+        let (personal_best, first_score) = match self.current_mut() {
+            Some(profile) => {
+                let first_score = profile.rain_best == 0 && score > 0;
+                (profile.record_rain(score), first_score)
+            }
+            None => (false, false),
+        };
         self.save();
-        let confetti = personal_best.then(|| Confetti::new(&mut self.rng));
+        let confetti = (personal_best || first_score).then(|| Confetti::new(&mut self.rng));
         if let Screen::Rain(play) = &mut self.screen {
-            play.over = Some(GameOver { personal_best, confetti, at: Instant::now() });
+            play.confirm_end = false;
+            play.over = Some(GameOver { personal_best, first_score, confetti, at: Instant::now() });
         }
     }
 
@@ -429,7 +450,7 @@ impl App {
             // Cap the step so a stalled frame doesn't drop words all at once.
             let seconds = now.saturating_duration_since(play.last).as_secs_f64().min(0.25);
             play.last = now;
-            if play.over.is_none() {
+            if play.over.is_none() && !play.confirm_end {
                 play.game.tick(seconds, &mut self.rng);
                 if play.game.is_over() {
                     self.finish_rain();

@@ -63,7 +63,19 @@ pub fn draw(frame: &mut Frame, area: Rect, app: &App, play: &RainPlay) -> Hints 
         draw_game_over(frame, sky, app, game, over, best);
         return vec![("⏎", s.h_play_again), ("esc", s.h_back)];
     }
-    vec![("esc", s.h_back), ("tab", s.h_restart)]
+    if play.confirm_end {
+        let hints = vec![("⏎", s.h_end_game), ("esc", s.h_keep_playing)];
+        let lines = vec![
+            Line::styled(s.end_game_title, Style::new().fg(theme().accent).bold()),
+            Line::default(),
+            Line::styled(s.end_game_note, Style::new().fg(theme().text)),
+            Line::default(),
+            widgets::hints(&hints),
+        ];
+        draw_panel(frame, sky, lines);
+        return hints;
+    }
+    vec![("esc", s.h_end_game), ("tab", s.h_restart)]
 }
 
 /// Where text of `width` columns sits in the sky for a position from 0 to 1 on each axis.
@@ -119,7 +131,8 @@ fn draw_splashes(frame: &mut Frame, sky: Rect, game: &Rain) {
 
 fn draw_game_over(frame: &mut Frame, sky: Rect, app: &App, game: &Rain, over: &GameOver, best: u32) {
     let s = app.strings();
-    let mut heading = vec![Span::styled(s.game_over, Style::new().fg(theme().accent).bold())];
+    let (title, color) = if over.first_score { (s.first_score, theme().green) } else { (s.game_over, theme().accent) };
+    let mut heading = vec![Span::styled(title, Style::new().fg(color).bold())];
     if over.personal_best {
         heading.push(Span::raw("   "));
         heading.push(Span::styled(format!(" {} ", s.personal_best), theme().on(theme().yellow).bold()));
@@ -139,7 +152,15 @@ fn draw_game_over(frame: &mut Frame, sky: Rect, app: &App, game: &Rain, over: &G
         s.best
     );
     lines.push(Line::from(widgets::dim(facts)));
+    draw_panel(frame, sky, lines);
 
+    if let Some(confetti) = &over.confetti {
+        widgets::confetti(frame, frame.area(), confetti, over.age().as_secs_f64());
+    }
+}
+
+/// A box in the middle of the sky that hides the words behind it.
+fn draw_panel(frame: &mut Frame, sky: Rect, lines: Vec<Line<'static>>) {
     let height = lines.len() as u16 + 4;
     let [panel] = Layout::vertical([Constraint::Length(height)]).flex(Flex::Center).areas(sky);
     let panel = panel.centered_horizontally(Constraint::Length(PANEL_WIDTH.min(sky.width)));
@@ -150,8 +171,4 @@ fn draw_game_over(frame: &mut Frame, sky: Rect, app: &App, game: &Rain, over: &G
         .style(Style::new().bg(theme().background));
     frame.render_widget(Clear, panel);
     frame.render_widget(Paragraph::new(lines).centered().block(block), panel);
-
-    if let Some(confetti) = &over.confetti {
-        widgets::confetti(frame, frame.area(), confetti, over.age().as_secs_f64());
-    }
 }

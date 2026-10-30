@@ -92,6 +92,9 @@ pub struct Strings {
     pub level: &'static str,
     pub words_label: &'static str,
     pub game_over: &'static str,
+    pub first_score: &'static str,
+    pub end_game_title: &'static str,
+    pub end_game_note: &'static str,
     pub stats_title: &'static str,
     pub tests_label: &'static str,
     pub best_wpm: &'static str,
@@ -127,6 +130,8 @@ pub struct Strings {
     pub h_speed_test: &'static str,
     pub h_start: &'static str,
     pub h_play_again: &'static str,
+    pub h_end_game: &'static str,
+    pub h_keep_playing: &'static str,
 }
 
 impl Strings {
@@ -242,6 +247,9 @@ static ENGLISH: Strings = Strings {
     level: "level",
     words_label: "words",
     game_over: "Game over",
+    first_score: "Your first score!",
+    end_game_title: "End this game?",
+    end_game_note: "Your score still counts.",
     stats_title: "Stats",
     tests_label: "tests",
     best_wpm: "best wpm",
@@ -283,6 +291,8 @@ static ENGLISH: Strings = Strings {
     h_speed_test: "speed test",
     h_start: "start",
     h_play_again: "play again",
+    h_end_game: "end game",
+    h_keep_playing: "keep playing",
 };
 
 static PORTUGUESE: Strings = Strings {
@@ -386,6 +396,9 @@ static PORTUGUESE: Strings = Strings {
     level: "nível",
     words_label: "palavras",
     game_over: "Fim de jogo",
+    first_score: "Sua primeira pontuação!",
+    end_game_title: "Encerrar este jogo?",
+    end_game_note: "Sua pontuação continua valendo.",
     stats_title: "Estatísticas",
     tests_label: "testes",
     best_wpm: "melhor ppm",
@@ -427,4 +440,6 @@ static PORTUGUESE: Strings = Strings {
     h_speed_test: "teste de velocidade",
     h_start: "começar",
     h_play_again: "jogar de novo",
+    h_end_game: "encerrar",
+    h_keep_playing: "continuar jogando",
 };
